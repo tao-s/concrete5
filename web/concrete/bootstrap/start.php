@@ -15,11 +15,16 @@ if (basename($_SERVER['PHP_SELF']) == DISPATCHER_FILENAME_CORE) {
  * ----------------------------------------------------------------------------
  */
 use Concrete\Core\Application\Application;
+use Concrete\Core\Config\Config as DatabaseConfig;
+use Concrete\Core\File\Type\TypeList;
 use Concrete\Core\Foundation\ClassAliasList;
 use Concrete\Core\Foundation\Service\ProviderList;
 use Concrete\Core\Permission\Key\Key as PermissionKey;
 use Concrete\Core\Support\Facade\Facade;
+use Concrete\Core\Config\ConfigLoader;
+use Illuminate\Filesystem\Filesystem;
 use Patchwork\Utf8\Bootup;
+use Illuminate\Config\Repository as Config;
 
 /**
  * ----------------------------------------------------------------------------
@@ -39,12 +44,23 @@ Facade::setFacadeApplication($cms);
 
 /**
  * ----------------------------------------------------------------------------
+ * Enable Config
+ * ----------------------------------------------------------------------------
+ */
+$file_system = new Filesystem();
+$database_config = new DatabaseConfig();
+$file_loader = new ConfigLoader($file_system, $database_config);
+$cms->instance('config', $config = new Config($file_loader, $env));
+
+/**
+ * ----------------------------------------------------------------------------
  * Setup core classes aliases.
  * ----------------------------------------------------------------------------
  */
 $list = ClassAliasList::getInstance();
-$list->registerMultiple(require DIR_BASE_CORE . '/config/aliases.php');
-$list->registerMultiple(require DIR_BASE_CORE . '/config/facades.php');
+$list->registerMultiple($config->get('app.aliases'));
+$list->registerMultiple($config->get('app.facades'));
+
 
 /**
  * ----------------------------------------------------------------------------
@@ -52,7 +68,28 @@ $list->registerMultiple(require DIR_BASE_CORE . '/config/facades.php');
  * ----------------------------------------------------------------------------
  */
 $list = new ProviderList($cms);
-$list->registerProviders(require DIR_BASE_CORE . '/config/services.php');
+$list->registerProviders($config->get('app.providers'));
+
+
+/**
+ * Register File Types and importer attributes
+ */
+$file_types = $config->get('files.allowed_types');
+$type_list = TypeList::getInstance();
+
+foreach($file_types as $type => $settings) {
+    array_unshift($settings, $type);
+    call_user_func_array(array($type_list, 'define'), $settings);
+}
+
+$file_attributes = $config->get('files.importer.attributes');
+
+foreach ($file_attributes as $attribute => $settings) {
+    array_unshift($settings, $type);
+    call_user_func_array(array($type_list, 'defineImporterAttribute'), $settings);
+}
+
+
 
 /**
  * ----------------------------------------------------------------------------
