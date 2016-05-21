@@ -16,13 +16,15 @@ defined('C5_EXECUTE') or die("Access Denied.");
 <div id="ccm-detail-page-attributes">
 
 <section class="ccm-ui">
-	<form method="post" action="<?=$controller->action('submit')?>" data-dialog-form="attributes" data-panel-detail-form="attributes">
+	<form method="post" action="<?=$controller->action('submit')?>" data-dialog-form="attributes" data-panel-detail-form="attributes"  data-action-after-save="reload">
 
         <? if (isset($sitemap) && $sitemap) { ?>
             <input type="hidden" name="sitemap" value="1" />
         <? } ?>
 
-		<?=Loader::helper('concrete/ui/help')->notify('panel', '/page/attributes')?>
+		<span class="ccm-detail-page-attributes-id"><?=t('Page ID: %s', $c->getCollectionID())?></span>
+
+		<?=Loader::helper('concrete/ui/help')->display('panel', '/page/attributes')?>
 		<? if ($assignment->allowEditName()) { ?>
 		<div class="form-group">
 			<label for="cName" class="control-label"><?=t('Name')?></label>
@@ -40,7 +42,7 @@ defined('C5_EXECUTE') or die("Access Denied.");
 			</div>
 		</div>
 		<? } ?>
-		
+
 		<? if ($assignment->allowEditUserID()) { ?>
 		<div class="form-group">
 			<label for="cName" class="control-label"><?=t('Author')?></label>
@@ -100,7 +102,7 @@ ConcretePageAttributesDetail = {
 			data: {
 				'akID': akID
 			},
-			type: 'post',
+			type: 'get',
 			success: function(r) {
                 _.each(r.assets.css, function(css) {
                     ccm_addHeaderItem(css, 'CSS');
@@ -120,6 +122,7 @@ ConcretePageAttributesDetail = {
 			},
 			complete: function() {
 				jQuery.fn.dialog.hideLoader();
+				$('#ccm-panel-detail-page-attributes').scrollTop(100000000);
 			}
 		});
 	}
@@ -141,6 +144,7 @@ $(function() {
         ConcreteEvent.unsubscribe('AjaxFormSubmitSuccess.saveAttributes');
         ConcreteEvent.subscribe('AjaxFormSubmitSuccess.saveAttributes', function(e, data) {
             if (data.form == 'attributes') {
+				ConcreteToolbar.disableDirectExit();
                 ConcreteEvent.publish('SitemapUpdatePageRequestComplete', {'cID': data.response.cID});
             }
         });

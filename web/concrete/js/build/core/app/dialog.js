@@ -1,8 +1,13 @@
 /**
  * concrete5 wrapper for jQuery UI
  */
+$.widget("concrete.dialog", $.ui.dialog, {
+    _allowInteraction: function(event) {
+        return !!$( event.target).closest('.ccm-interaction-dialog').length || this._super(event);
+    }
+});
 
-$.widget.bridge( "jqdialog", $.ui.dialog );
+$.widget.bridge( "jqdialog", $.concrete.dialog );
 // wrap our old dialog function in the new dialog() function.
 jQuery.fn.dialog = function() {
     // Pass this over to jQuery UI Dialog in a few circumstances
@@ -105,6 +110,7 @@ jQuery.fn.dialog.open = function(options) {
         'escapeClose': true,
         'width': w,
         'height': h,
+        'resizable': true,
 
         'create': function() {
             $(this).parent().addClass('animated fadeIn');
@@ -125,6 +131,15 @@ jQuery.fn.dialog.open = function(options) {
             });
 
             jQuery.fn.dialog.activateDialogContents($dialog);
+
+            // on some brother (eg: Chrome) the resizable get hidden because the button pane
+            // in on top of it, here is a fix for this:
+            if ( $dialog.jqdialog('option', 'resizable') )
+            {
+                var $wrapper = $($dialog.parent());
+                var z = parseInt($wrapper.find('.ui-dialog-buttonpane').css('z-index'));
+                $wrapper.find('.ui-resizable-handle').css('z-index', z + 1000);
+            }
 
             if (typeof options.onOpen != "undefined") {
                 if ((typeof options.onOpen) == 'function') {
@@ -148,7 +163,7 @@ jQuery.fn.dialog.open = function(options) {
             }
             if (typeof options.onClose != "undefined") {
                 if ((typeof options.onClose) == 'function') {
-                    options.onClose();
+                    options.onClose($(this));
                 } else {
                     eval(options.onClose);
                 }
@@ -178,7 +193,7 @@ jQuery.fn.dialog.open = function(options) {
         }
     };
 
-    var finalSettings = {'autoOpen': false};
+    var finalSettings = {'autoOpen': false, 'data': {} };
     $.extend(finalSettings, defaults, options);
 
     if (finalSettings.element) {
@@ -189,6 +204,7 @@ jQuery.fn.dialog.open = function(options) {
         $.ajax({
             type: 'GET',
             url: finalSettings.href,
+            data: finalSettings.data,
             success: function(r) {
                 jQuery.fn.dialog.hideLoader();
                 // note the order here is very important in order to actually run javascript in

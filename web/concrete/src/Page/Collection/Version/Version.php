@@ -47,9 +47,7 @@ class Version extends Object implements \Concrete\Core\Permission\ObjectInterfac
 
     public function refreshCache()
     {
-        CacheLocal::delete('page', $this->getCollectionID() . ':' . $this->getVersionID());
-        CacheLocal::delete('page', $this->getCollectionID() . ':' . 'RECENT');
-        CacheLocal::delete('page', $this->getCollectionID() . ':' . 'ACTIVE');
+        CacheLocal::delete('page', $this->getCollectionID());
     }
 
     public static function get(&$c, $cvID)
@@ -401,8 +399,7 @@ class Version extends Object implements \Concrete\Core\Permission\ObjectInterfac
         if ($c->getCollectionInheritance() == 'TEMPLATE') {
             // we make sure to update the cInheritPermissionsFromCID value
             $pType = PageType::getByID($c->getPageTypeID());
-            $pTemplate = PageTemplate::getByID($c->getPageTemplateID());
-            $masterC = $pType->getPageTypePageTemplateDefaultPageObject($pTemplate);
+            $masterC = $pType->getPageTypePageTemplateDefaultPageObject();
             $db->Execute('update Pages set cInheritPermissionsFromCID = ? where cID = ?', array(
                 $masterC->getCollectionID(),
                 $c->getCollectioniD()

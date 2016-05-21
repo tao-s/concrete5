@@ -6,6 +6,9 @@ $this->inc('elements/header.php'); ?>
     <div class="container">
         <div class="row">
             <div class="col-sm-12">
+
+                <?php View::element('system_errors', array('format' => 'block', 'error' => isset($error) ? $error : null, 'success' => isset($success) ? $success : null, 'message' => isset($message) ? $message : null)); ?>
+
                 <? print $innerContent; ?>
             </div>
         </div>

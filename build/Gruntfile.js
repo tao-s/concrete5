@@ -69,7 +69,13 @@ module.exports = function(grunt) {
                 '<%= DIR_BASE %>/concrete/js/build/vendor/redactor/fontcolor.js',
                 '<%= DIR_BASE %>/concrete/js/build/vendor/redactor/fontfamily.js',
                 '<%= DIR_BASE %>/concrete/js/build/vendor/redactor/fontsize.js',
-                '<%= DIR_BASE %>/concrete/js/build/core/redactor/plugin.js'
+                '<%= DIR_BASE %>/concrete/js/build/vendor/redactor/table.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/redactor/undoredo.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/redactor/lightbox.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/redactor/underline.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/redactor/inline.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/redactor/magic.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/redactor/specialcharacters.js'
             ]
         },
 
@@ -80,9 +86,11 @@ module.exports = function(grunt) {
                 '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-form/jquery-form.js',
                 '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-mousewheel/jquery.mousewheel.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/app/concrete5.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/concrete5-const.js',
                 '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-liveupdate/jquery-liveupdate.js',
                 '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-pep/jquery-pep.js',
-                '<%= DIR_BASE %>/concrete/js/build/vendor/retinajs/retinajs.js',
+                //needs some handholding
+                // '<%= DIR_BASE %>/concrete/js/build/vendor/retinajs/retinajs.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/app/base.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/app/ajax-request/base.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/app/ajax-request/form.js',
@@ -102,11 +110,23 @@ module.exports = function(grunt) {
                 '<%= DIR_BASE %>/concrete/js/build/core/app/custom-style.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/app/tabs.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/app/toolbar.js',
-
+                '<%= DIR_BASE %>/concrete/js/build/vendor/tourist/tourist.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/dialog.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/launcher.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/guide-manager.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/guides/toolbar.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/guides/change-content.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/guides/change-content-edit-mode.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/guides/add-content.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/guides/add-content-edit-mode.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/guides/add-page.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/guides/personalize.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/guides/dashboard.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/help/guides/location-panel.js',
                 // Edit Mode
                 '<%= DIR_BASE %>/concrete/js/build/core/app/edit-mode/editmode.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/app/edit-mode/block.js',
-                '<%= DIR_BASE %>/concrete/js/build/core/app/edit-mode/StackDisplay.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/app/edit-mode/stackdisplay.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/app/edit-mode/area.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/app/edit-mode/layout.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/app/edit-mode/dragarea.js',
@@ -119,8 +139,6 @@ module.exports = function(grunt) {
         filemanager: {
             dest: '<%= DIR_BASE %>/concrete/js/file-manager.js',
             src: [
-                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupuload/jquery-iframe-transport.js',
-                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/jquery-fileupload.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/file-manager/search.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/file-manager/selector.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/file-manager/menu.js'
@@ -162,6 +180,11 @@ module.exports = function(grunt) {
             src: '<%= DIR_BASE %>/concrete/js/build/vendor/bootstrap/transition.js'
         },
 
+        backbone: {
+            dest: '<%= DIR_BASE %>/concrete/js/backbone.js',
+            src: '<%= DIR_BASE %>/concrete/js/build/vendor/backbone/backbone.js'
+        },
+
         underscore: {
             dest: '<%= DIR_BASE %>/concrete/js/underscore.js',
             src: '<%= DIR_BASE %>/concrete/js/build/vendor/underscore/underscore.js'
@@ -172,16 +195,33 @@ module.exports = function(grunt) {
             src: '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-cookie/jquery-cookie.js'
         },
 
+        jquery_tristate: {
+            dest: '<%= DIR_BASE %>/concrete/js/jquery-tristate.js',
+            src: '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-tristate/jquery-tristate.js'
+        },
+
         jquery_fileupload: {
             dest: '<%= DIR_BASE %>/concrete/js/jquery-fileupload.js',
-            src: '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/jquery-fileupload.js'
+            src: [
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/load-image.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/load-image-ios.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/load-image-orientation.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/load-image-meta.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/load-image-exif.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/load-image-exif-map.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/javascript-canvas-to-blob.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/javascript-canvas-to-blob.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/jquery-iframe-transport.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/jquery-fileupload.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/jquery-fileupload-process.js',
+                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-fileupload/jquery-fileupload-image.js'
+            ]
         },
 
         dropzone: {
             dest: '<%= DIR_BASE %>/concrete/js/dropzone.js',
             src: '<%= DIR_BASE %>/concrete/js/build/vendor/dropzone/dropzone.js'
         },
-
 
         jquery_form: {
             dest: '<%= DIR_BASE %>/concrete/js/jquery-form.js',
@@ -236,7 +276,8 @@ module.exports = function(grunt) {
                 '<%= DIR_BASE %>/concrete/js/build/core/sitemap/sitemap.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/sitemap/menu.js',
                 '<%= DIR_BASE %>/concrete/js/build/core/sitemap/search.js',
-                '<%= DIR_BASE %>/concrete/js/build/core/sitemap/selector.js'
+                '<%= DIR_BASE %>/concrete/js/build/core/sitemap/selector.js',
+                '<%= DIR_BASE %>/concrete/js/build/core/sitemap/sitemap-selector.js'
             ]
         },
 
@@ -271,6 +312,10 @@ module.exports = function(grunt) {
             ]
         },
 
+        ccm_frontend_parallax_image: {
+            dest: '<%= DIR_BASE %>/concrete/js/frontend/parallax-image.js',
+            src: '<%= DIR_BASE %>/concrete/js/build/core/frontend/parallax-image.js'
+        },
 
         ccm_gathering: {
             dest: '<%= DIR_BASE %>/concrete/js/gathering.js',
@@ -300,13 +345,13 @@ module.exports = function(grunt) {
             dest: '<%= DIR_BASE %>/concrete/js/image-editor.js',
             src: '<%= DIR_BASE %>/concrete/js/build/core/image-editor/image-editor.js'
         },
-        legacy: {
-            dest: '<%= DIR_BASE %>/concrete/js/legacy.js',
-            src: [
-                '<%= DIR_BASE %>/concrete/js/build/vendor/modernizr/modernizr.js',
-                '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-placeholder/jquery.placeholder.js',
-                '<%= DIR_BASE %>/concrete/js/build/core/legacy.js'
-            ]
+        ccm_translator: {
+            dest: '<%= DIR_BASE %>/concrete/js/translator.js',
+            src: '<%= DIR_BASE %>/concrete/js/build/core/translator.js'
+        },
+        jquery_text_counter: {
+            dest: '<%= DIR_BASE %>/concrete/js/textcounter.js',
+            src: '<%= DIR_BASE %>/concrete/js/build/vendor/jquery-text-counter/textcounter.js'
         }
     };
 
@@ -323,9 +368,11 @@ module.exports = function(grunt) {
 
     // List of the CSS files to be generated
     var css = {
+        '<%= DIR_BASE %>/concrete/css/build/vendor/bootstrap/bootstrap.css': '<%= DIR_BASE %>/concrete/css/build/vendor/bootstrap/bootstrap.less',
         '<%= DIR_BASE %>/concrete/css/app.css': '<%= DIR_BASE %>/concrete/css/build/core/app/app.less',
         '<%= DIR_BASE %>/concrete/css/editable-fields.css': '<%= DIR_BASE %>/concrete/css/build/core/editable-fields.less',
         '<%= DIR_BASE %>/concrete/css/select2.css': '<%= DIR_BASE %>/concrete/css/build/core/select2.less',
+        '<%= DIR_BASE %>/concrete/css/dropzone.css': '<%= DIR_BASE %>/concrete/css/build/vendor/dropzone/dropzone.less',
         '<%= DIR_BASE %>/concrete/css/jquery-ui.css': '<%= DIR_BASE %>/concrete/css/build/vendor/jquery-ui/jquery-ui.less',
         '<%= DIR_BASE %>/concrete/css/jquery-magnific-popup.css': '<%= DIR_BASE %>/concrete/css/build/vendor/jquery-magnific-popup/jquery-magnific-popup.less',
         '<%= DIR_BASE %>/concrete/css/jquery-awesome-rating.css': '<%= DIR_BASE %>/concrete/css/build/vendor/jquery-awesome-rating/jquery-awesome-rating.less',
@@ -347,7 +394,7 @@ module.exports = function(grunt) {
         '<%= DIR_BASE %>/concrete/css/topics.css': '<%= DIR_BASE %>/concrete/css/build/core/topics.less',
         '<%= DIR_BASE %>/concrete/themes/elemental/css/bootstrap-modified.css': '<%= DIR_BASE %>/concrete/themes/elemental/css/build/bootstrap-3.2.0/bootstrap.less',
         '<%= DIR_BASE %>/concrete/css/frontend/pagination.css': '<%= DIR_BASE %>/concrete/css/build/core/frontend/pagination.less',
-        '<%= DIR_BASE %>/concrete/css/legacy.css': '<%= DIR_BASE %>/concrete/css/build/core/legacy.less'
+        '<%= DIR_BASE %>/concrete/css/translator.css': '<%= DIR_BASE %>/concrete/css/build/core/translator.less'
     };
 
     // Let's include the dependencies
@@ -443,8 +490,18 @@ module.exports = function(grunt) {
 
     // Set Grunt tasks
     grunt.initConfig(config);
-    grunt.registerTask('js:debug', jsTargets.debug);
-    grunt.registerTask('js:release', jsTargets.release);
+
+    grunt.registerTask('generate-constants', 'Generate Javascript Constants', function() {
+        require('./tasks/generate-constants.js')(grunt, config, parameters, this.async());
+    });
+
+    grunt.registerTask('jsOnly:debug', jsTargets.debug);
+    grunt.registerTask('jsOnly:release', jsTargets.release );
+
+    //grunt.registerTask('js:debug', ['generate-constants', 'jsOnly:debug' ]);
+    //grunt.registerTask('js:release', ['generate-constants', 'jsOnly:release' ]);
+    grunt.registerTask('js:debug', ['jsOnly:debug' ]);
+    grunt.registerTask('js:release', ['jsOnly:release' ]);
     grunt.registerTask('js', 'js:release');
 
     grunt.registerTask('css:debug', 'less:debug');
@@ -457,10 +514,6 @@ module.exports = function(grunt) {
 
     grunt.registerTask('remove-short-tags', 'Remove short tags.', function() {
         require('./tasks/remove-short-tags.js')(grunt, config, parameters, this.async());
-    });
-
-    grunt.registerTask('generate-symbols', 'Generate IDE symbols', function() {
-        require('./tasks/generate-symbols.js')(grunt, config, parameters, this.async());
     });
 
     grunt.registerTask('build-release-download', 'Build process: download the latest concrete5 release from GitHub.', function() {

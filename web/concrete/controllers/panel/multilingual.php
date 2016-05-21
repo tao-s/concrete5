@@ -15,6 +15,7 @@ class Multilingual extends BackendInterfacePageController
     {
         $this->requireAsset('core/sitemap');
         $mlist = Section::getList();
+        $ml = array();
         $currentSection = Section::getCurrentSection();
         foreach($mlist as $m) {
             if ($m->getCollectionID() != $currentSection->getCollectionID()) {
@@ -32,7 +33,7 @@ class Multilingual extends BackendInterfacePageController
 
     protected function canAccess()
     {
-        return $this->permissions->canEditPageMultilingualSettings() && Config::get('concrete.multilingual.enabled');
+        return $this->permissions->canEditPageMultilingualSettings() && \Core::make('multilingual/detector')->isEnabled();
     }
 
 }

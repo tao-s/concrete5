@@ -2,6 +2,104 @@
 <?
 use Concrete\Core\Multilingual\Page\Section\Section as MultilingualSection;
 ?>
+<script type="text/javascript">
+var ccmCountryForLanguageLister = (function() {
+    var countryDictionary = <?php echo json_encode($countries); ?>;
+    var sortedCountries = (function() {
+        var list = [];
+        $.each(countryDictionary, function(id) {
+           list.push(id);
+        });
+        list.sort(function(aCode, bCode) {
+           var aName = countryDictionary[aCode].toLowerCase(), bName = countryDictionary[bCode].toLowerCase();
+           if(aName < bName) {
+               return -1;
+           }
+           if(aName > bName) {
+               return 1;
+           }
+           return 0;
+        });
+        return list;
+    })();
+    var cache = {'': []};
+    function appendCountries($parent, countryCodes) {
+        $.each(countryCodes, function(_, countryCode) {
+           $parent.append($('<option />').val(countryCode).text(countryDictionary[countryCode]));
+        });
+    }
+    function updateCountrySelect($country, preferredCountryCodes) {
+        var preferredCountries = [];
+        $.each(preferredCountryCodes, function(_, countryCode) {
+            if(countryCode in countryDictionary) {
+                preferredCountries.push(countryCode);
+            }
+        });
+        var selectedCountry = $country.val();
+        $country.empty().append($('<option value="" />').text(<?php echo json_encode(t('*** Undetermined country')); ?>));
+        if(preferredCountries.length) {
+            var otherCountries = [];
+            $.each(sortedCountries, function(_, countryCode) {
+                if($.inArray(countryCode, preferredCountries) < 0) {
+                    otherCountries.push(countryCode);
+                }
+            });
+            var $group;
+            $country.append($group = $('<optgroup />').attr('label', <?php echo json_encode(t('Suggested countries')); ?>));
+            appendCountries($group, preferredCountries);
+            $country.append($group = $('<optgroup />').attr('label', <?php echo json_encode(t('Other countries')); ?>));
+            appendCountries($group, otherCountries);
+        }
+        else {
+           appendCountries($country, sortedCountries);
+        }
+        $country.val(selectedCountry);
+    }
+    function CountryForLanguageLister($language, $country) {
+        var me = this;
+        this.$language = $language;
+        this.$country = $country;
+        this.$language.change(function() {
+            me.updateCountries();
+        });
+        this.currentLanguage = null;
+        this.updateCountries();
+    }
+    CountryForLanguageLister.prototype = {
+        updateCountries: function() {
+            var me = this;
+            var language = this.$language.val();
+            if(language === '') {
+                this.$country.attr('disabled', 'disabled');
+            }
+            else {
+                this.$country.removeAttr('disabled');
+            }
+            if(language === this.currentLanguage) {
+                return;
+            }
+            this.currentLanguage = language;
+            if(language in cache) {
+                updateCountrySelect(this.$country, cache[language]);
+                return;
+            }
+            updateCountrySelect(this.$country, []);
+            $.get(
+                <?php echo json_encode($view->action('get_countries_for_language')); ?>,
+                {language: language},
+                function(data) {
+                    cache[language] = data ? data : [];
+                    if(me.currentLanguage === language) {
+                        updateCountrySelect(me.$country, cache[language]);
+                    }
+                },
+                'json'
+            );
+        }
+    };
+    return CountryForLanguageLister;
+})();
+</script>
 <fieldset>
     <legend><?php echo t('Content Sections')?></legend>
     <?php
@@ -42,7 +140,7 @@ use Concrete\Core\Multilingual\Page\Section\Section as MultilingualSection;
         </div>
         <div class="form-group">
             <?php echo $form->label('msCountry', t('Choose Country'))?>
-            <?php echo $form->select('msCountry', $countries);?>
+            <?php echo $form->select('msCountry', array_merge(array('' => t('*** Undetermined country')), $countries));?>
         </div>
 
         <div class="form-group">
@@ -62,6 +160,7 @@ use Concrete\Core\Multilingual\Page\Section\Section as MultilingualSection;
 
 <script type="text/javascript">
 $(function() {
+	new ccmCountryForLanguageLister($('#msLanguage'), $('#msCountry'));
 	$("select[name=msCountry]").change(function() {
 		ccm_multilingualPopulateIcons($(this).val());
 	});
@@ -77,90 +176,14 @@ ccm_multilingualPopulateIcons = function(country) {
 </script>
 
 
-<fieldset>
-    <legend><?php echo t('Copy Locale Tree')?></legend>
-<?
-$u = new User();
-$copyLocales = array();
-$includesHome = false;
-foreach($pages as $pc) {
-	$pcl = MultilingualSection::getByID($pc->getCollectionID());
-	if ($pc->getCollectionID() == HOME_CID) {
-		$includesHome = true;
-	}
-	$copyLocales[$pc->getCollectionID()] = tc(/*i18n: %1$s is a page name, %2$s is a language name, %3$s is a locale identifier (eg en_US)*/'PageWithLocale', '%1$s (%2$s, %3$s)', $pc->getCollectionName(), $pcl->getLanguageText(), $pcl->getLocale());
-}
-
-if ($u->isSuperUser() && !$includesHome) { ?>
-<form method="post" id="ccm-internationalization-copy-tree" action="#">
-	<?php if (count($pages) > 1) {
-		$copyLocaleSelect1 = $form->select('copyTreeFrom', $copyLocales);
-		$copyLocaleSelect2 = $form->select('copyTreeTo', $copyLocales);
-		
-		?>
-		<p><?php echo t('Copy all pages from a locale to another section. This will only copy pages that have not been associated. It will not replace or remove any pages from the destination section.')?></p>
-		<div class="form-group">
-    		<label class="control-label"><?php echo t('Copy From')?></label>
-		    <?php echo $copyLocaleSelect1?>
-		</div>
-
-        <div class="form-group">
-		    <label class="control-label"><?php echo tc('Destination', 'To')?></label>
-		    <?php echo $copyLocaleSelect2?>
-		</div>
-
-        <?php echo Loader::helper('validation/token')->output('copy_tree')?>
-        <button class="btn btn-default pull-left" type="submit" name="copy"><?=t('Copy Tree')?></button>
-
-	<?php } else if (count($pages) == 1) { ?>
-		<p><?php echo t("You must have more than one multilingual section to use this tool.")?></p>
-	<?php } else { ?>
-		<p><?php echo t('You have not created any multilingual content sections yet.')?></p>
-	<?php } ?>
-
-	<? if(version_compare(APP_VERSION, '5.6.0.3', '>')) { 
-			// 5.6.1 OR GREATER
-		?>
-		<script type="text/javascript">
-		$(function() {
-			$("#ccm-internationalization-copy-tree").on('submit', function() {
-				var ctf = $('select[name=copyTreeFrom]').val();
-				var ctt = $('select[name=copyTreeTo]').val();
-				if (ctt > 0 && ctf > 0 && ctt != ctf) {
-					ccm_triggerProgressiveOperation(
-						CCM_TOOLS_PATH + '/dashboard/sitemap_copy_all', 
-						[{'name': 'origCID', 'value': ctf}, {'name': 'destCID', 'value': ctt}, {'name': 'copyChildrenOnly', 'value': true}],
-						"<?=t('Copy Locale Tree')?>", function() {
-							window.location.href= "<?=$this->action('tree_copied')?>";
-						}
-					);
-				} else {
-					alert("<?=t('You must choose two separate multilingual sections to copy from/to')?>");
-				}
-				return false;
-			});
-		});
-		</script>
-
-	<? } ?>
-
-</form>
-<? } else if (!$u->isSuperUser()) { ?>
-	<p><?=t('Only the super user may copy locale trees.')?></p>
-<? } else if ($includesHome) { ?>
-	<p><?=t('Since one of your multilingual sections is the home page, you may not duplicate your site tree using this tool. You must manually assign pages using the page report.')?></p>
-<? } ?>
-</fieldset>
-
-<div class="spacer-row-6"></div>
-
+<hr/>
 <?php if (count($pages) > 0) {
 	$defaultLocales = array('' => t('** None Set'));
 	foreach($pages as $pc) {
 		$pcl = MultilingualSection::getByID($pc->getCollectionID());
 		$defaultLocales[$pcl->getLocale()] = tc(/*i18n: %1$s is a page name, %2$s is a language name, %3$s is a locale identifier (eg en_US)*/'PageWithLocale', '%1$s (%2$s, %3$s)', $pc->getCollectionName(), $pcl->getLanguageText(), $pcl->getLocale());
 	}
-	$defaultLocalesSelect = $form->select('defaultLocale', $defaultLocales, $defaultLocale);
+	$defaultLocalesSelect = $form->select('defaultLocale', $defaultLocales, $defaultLocale, array('required' => 'required'));
 	?>
    <legend><?php echo t('Multilingual Settings')?></legend>
 	<fieldset>
@@ -169,7 +192,7 @@ if ($u->isSuperUser() && !$includesHome) { ?>
                 <label class="control-label"><?php echo t('Default Locale');?></label>
                 <?php print $defaultLocalesSelect; ?>
             </div>
-            
+
             <div class="form-group">
                 <div class="checkbox">
                 <label>
@@ -186,33 +209,46 @@ if ($u->isSuperUser() && !$includesHome) { ?>
             </div>
 
             <div class="form-group">
+                <label class="control-label"><?php echo t('Registered Users Language Preferences'); ?></label>
+                <p><?php echo t('Load Interface Language from:'); ?></p>
+                <div class="radio">
+                    <label>
+                        <?php echo $form->radio('keepUsersLocale', 0, $keepUsersLocale); ?>
+                        <span><?php echo t('Page (if it exists)'); ?></span>
+                    </label>
+                </div>
+                <div class="radio">
+                    <label>
+                        <?php echo $form->radio('keepUsersLocale', 1, $keepUsersLocale); ?>
+                        <span><?php echo t("User Profile"); ?></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
                 <label class="control-label"><?php echo t('Site interface source locale');?></label>
+                <div class="form-inline">
                 <?php
                 echo $form->select('defaultSourceLanguage', array_merge(array('' => t('*** Unknown or mixed language')), $languages), $defaultSourceLanguage);
-                echo $form->select('defaultSourceCountry', array_merge(array('' => ''), $countries), $defaultSourceCountry);
                 ?>
+
+                    <?
+                echo $form->select('defaultSourceCountry', array_merge(array('' => t('*** Undetermined country')), $countries), $defaultSourceCountry);
+                ?>
+                </div>
                 <script>
                 $(document).ready(function() {
-                    function update() {
-                        if($('#defaultSourceLanguage').val()) {
-                        	$('#defaultSourceCountry').removeAttr('disabled');
-                        }
-                        else {
-                        	$('#defaultSourceCountry').attr('disabled', 'disabled');                        	
-                        }
-                    }
-                    update();
-                    $('#defaultSourceLanguage').on('change', function() {
-                        update();
-                    });
+                	new ccmCountryForLanguageLister($('#defaultSourceLanguage'), $('#defaultSourceCountry'));
                 });
                 </script>
             </div>
-            
+
             <div class="form-group">
                 <?php echo Loader::helper('validation/token')->output('set_default')?>
                 <button class="btn btn-default pull-left" type="submit" name="save"><?=t('Save Settings')?></button>
             </div>
         </form>
     </fieldset>
-	<?php } ?>
+    <?php
+}
+

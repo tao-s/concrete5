@@ -1,50 +1,49 @@
 <?php
 namespace Concrete\Core\Authentication\Type\OAuth;
 
-use Concrete\Core\Authentication\Type\OAuth\OAuth2\GenericOauth2TypeController;
 use Concrete\Core\Foundation\Service\Provider;
 use OAuth\Common\Http\Client\CurlClient;
 use OAuth\ServiceFactory;
 use OAuth\UserData\ExtractorFactory;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class ServiceProvider extends Provider
 {
-
     public function register()
     {
-        $this->app->bind(
-            'oauth/factory/service',
-            function ($app, $params = array()) {
-                $factory = new ServiceFactory();
-                $factory->setHttpClient($client = new CurlClient());
-                $client->setCurlParameters((array) $params);
+        $this->app->bind('oauth/factory/service', function ($app, $params = array()) {
+            $factory = new ServiceFactory();
+            $factory->setHttpClient($client = new CurlClient());
+            $client->setCurlParameters((array) $params);
 
-                return $factory;
-            });
-        $this->app->bindShared(
-            'oauth/factory/extractor',
-            function () {
-                return new ExtractorFactory();
-            });
+            return $factory;
+        });
+        $this->app->bindShared('oauth/factory/extractor', function () {
+            return new ExtractorFactory();
+        });
 
-        $this->app->bind(
-            'oauth_extractor',
-            function ($app, $service) {
-                $extractor_factory = $app->make('oauth/factory/extractor');
-                return $extractor_factory->get($service);
-            });
+        $this->app->bind('oauth_extractor', function ($app, $params = array()) {
+            if (!is_array($params)) {
+                $params = array($params);
+            }
+
+            if (!$service = head($params)) {
+                throw new \InvalidArgumentException('No Service given.');
+            }
+
+            $extractor_factory = $app->make('oauth/factory/extractor');
+
+            return $extractor_factory->get($service);
+        });
 
         \Route::register(
             '/ccm/system/authentication/oauth2/{type}/{action}',
-            function($type, $action) {
+            function ($type, $action) {
                 try {
                     $type = \AuthenticationType::getByHandle($type);
                     if ($type && is_object($type) && !$type->isError()) {
-                        /** @var GenericOauth2TypeController $controller */
+                        /** @var GenericOauthTypeController $controller */
                         $controller = $type->getController();
-                        if ($controller instanceof GenericOauth2TypeController) {
-
+                        if ($controller instanceof GenericOauthTypeController) {
                             switch ($action) {
                                 case 'attempt_auth':
                                     $controller->handle_authentication_attempt();
@@ -62,8 +61,8 @@ class ServiceProvider extends Provider
                         }
                     }
                 } catch (\Exception $e) {
+                    \Log::addNotice('OAUTH ERROR: ' . $e->getMessage());
                 }
             });
     }
-
 }

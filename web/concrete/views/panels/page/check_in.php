@@ -1,6 +1,7 @@
 <?
 defined('C5_EXECUTE') or die("Access Denied.");
 $v = $c->getVersionObject();
+$require_version_comments = (bool) Config::get('concrete.misc.require_version_comments');
 ?>
 
 <div class="ccm-panel-content-inner">
@@ -9,7 +10,7 @@ $v = $c->getVersionObject();
 
 <h5><?=t('Version Comments')?></h5>
 
-<div class="ccm-panel-check-in-comments"><textarea name="comments" id="ccm-check-in-comments" /></textarea></div>
+<div class="ccm-panel-check-in-comments"><textarea name="comments" id="ccm-check-in-comments"<?php echo $require_version_comments ? ' required="required"' : ''; ?>></textarea></div>
 
 <? if ($cp->canApprovePageVersions()) {
 	if ($c->isPageDraft()) {
@@ -19,9 +20,21 @@ $v = $c->getVersionObject();
 		$pk = PermissionKey::getByHandle('approve_page_versions');
 		$pk->setPermissionObject($c);
 		$pa = $pk->getPermissionAccessObject();
-		if (is_object($pa) && count($pa->getWorkflows()) > 0) {
-			$publishTitle = t('Submit to Workflow');
-		}
+        $workflows = array();
+        $canApproveWorkflow = true;
+        if (is_object($pa)) {
+            $workflows = $pa->getWorkflows();
+        }
+        foreach($workflows as $wf) {
+            if (!$wf->canApproveWorkflow()) {
+                $canApproveWorkflow = false;
+            }
+        }
+
+        if (count($workflows) > 0 && !$canApproveWorkflow) {
+            $publishTitle = t('Submit to Workflow');
+        }
+        
 	}
 ?>
 <div class="ccm-panel-check-in-publish">
@@ -74,6 +87,11 @@ $v = $c->getVersionObject();
 $(function() {
     setTimeout("$('#ccm-check-in-comments').focus();",300);
     $('#ccm-check-in').concreteAjaxForm();
+    <?php if ($c->isPageDraft() && $cp->canDeletePage()) { ?>
+    $('button#ccm-check-in-discard').on('click', function () {
+        return confirm('<?=t('This will remove this draft and it cannot be undone. Are you sure?')?>');
+    });
+	<?php } ?>
 });
 </script>
 

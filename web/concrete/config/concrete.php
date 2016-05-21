@@ -7,9 +7,9 @@ return array(
      *
      * @var string
      */
-    'version'           => '5.7.3',
-    'version_installed' => '5.7.3',
-    'version_db' => '20141219000000', // the key of the latest database migration - corresponds to 5.7.3
+    'version'           => '5.7.5.7',
+    'version_installed' => '5.7.5.7',
+    'version_db' => '20160412000000', // the key of the latest database migration
 
     /**
      * Installation status
@@ -165,6 +165,13 @@ return array(
         'pages'                    => false,
 
         /**
+         * Use Doctrine development mode
+         *
+         * @var bool
+         */
+        'doctrine_dev_mode'        => false,
+
+        /**
          * How long to cache full page
          *
          * @var string
@@ -177,10 +184,20 @@ return array(
          * @var int
          */
         'full_page_lifetime_value' => null,
-        'identifier'               => md5(str_replace(array('https://', 'http://'), '', BASE_URL) . DIR_REL),
 
+        /**
+         * Calculate the cache key reading the assets contents (true) of the assets modification time (false).
+         *
+         * @var bool
+         */
+        'full_contents_assets_hash' => false,
 
         'directory'   => DIR_FILES_UPLOADED_STANDARD . '/cache',
+        /**
+         * Relative path to the cache directory. If empty it'll be calculated from concrete.cache.directory
+         * @var string|null
+         */
+        'directory_relative' => null,
         'page'        => array(
             'directory' => DIR_FILES_UPLOADED_STANDARD . '/cache/pages',
             'adapter'      => 'file',
@@ -192,12 +209,12 @@ return array(
         'levels' => array(
             'expensive' => array(
                 'drivers' => array(
-                    array(
+                    'core_ephemeral' => array(
                         'class' => '\Stash\Driver\Ephemeral',
                         'options' => array()
                     ),
 
-                    array(
+                    'core_filesystem' => array(
                         'class' => '\Stash\Driver\FileSystem',
                         'options' => array(
                             'path' => DIR_FILES_UPLOADED_STANDARD . '/cache',
@@ -209,7 +226,7 @@ return array(
             ),
             'object' => array(
                 'drivers' => array(
-                    array(
+                    'core_ephemeral' => array(
                         'class' => '\Stash\Driver\Ephemeral',
                         'options' => array()
                     )
@@ -220,7 +237,6 @@ return array(
     ),
 
     'multilingual' =>   array(
-        'enabled' => false, // note this will automatically be set to true if needed
         'redirect_home_to_default_locale' => false,
         'use_browser_detected_locale' => false,
         'default_locale' => false,
@@ -284,14 +300,32 @@ return array(
     ),
 
     'filesystem'        => array(
-
+        /** Temporary directory.
+         * @link \Concrete\Core\File\Service\File::getTemporaryDirectory
+         */
+        'temp_directory' => null,
         'permissions'   => array(
             'file' => FILE_PERMISSIONS_MODE_COMPUTED,
             'directory' => DIRECTORY_PERMISSIONS_MODE_COMPUTED
         )
     ),
 
-    /**
+    'editor' => array(
+        'concrete' => array(
+            'enable_filemanager' => true,
+            'enable_sitemap' => true
+        ),
+        'plugins' => array(
+            'selected' => array(
+                'concrete5lightbox',
+                'undoredo',
+                'specialcharacters',
+                'table'
+            )
+        )
+    ),
+
+/**
      * ------------------------------------------------------------------------
      * Email settings
      * ------------------------------------------------------------------------
@@ -305,12 +339,20 @@ return array(
          */
         'enabled' => true,
         'default' => array(
-            'address' => 'concrete5-noreply@' . $_SERVER['SERVER_NAME'],
+            'address' => 'concrete5-noreply@' . (isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : 'localhost'),
             'name'    => ''
         ),
         'form_block' => array(
             'address' => false
-        )
+        ),
+        'forgot_password' => array(
+            'address' => null,
+            'name' => null,
+        ),
+        'validate_registration' => array(
+            'address' => null,
+            'name' => null,
+        ),
     ),
 
     /**
@@ -322,31 +364,42 @@ return array(
         /**
          * Enable marketplace integration
          *
-         * @var bool
+         * @var bool concrete.marketplace.enabled
          */
         'enabled'            => true,
 
         /**
+         * Time it takes for a request to timeout
+         *
+         * @var int concrete.marketplace.request_timeout
+         */
+        'request_timeout'   => 30,
+
+        /**
          * Marketplace Token
          *
-         * @var null|string
+         * @var null|string concrete.marketplace.token
          */
         'token'              => null,
 
         /**
          * Marketplace Site url Token
          *
-         * @var null|string
+         * @var null|string concrete.marketplace.site_token
          */
         'site_token'         => null,
 
         /**
          * Enable intelligent search integration
+         *
+         * @var bool concrete.marketplace.intelligent_search
          */
         'intelligent_search' => true,
 
         /**
          * Log requests
+         *
+         * @var bool concrete.marketplace.log_requests
          */
         'log_requests' => false
     ),
@@ -390,33 +443,36 @@ return array(
         'package_backup_directory'      => DIR_FILES_UPLOADED_STANDARD . '/trash',
         'enable_progressive_page_reindex'      => true,
         'mobile_theme_id'               => 0,
-        'seen_introduction'             => false,
         'sitemap_approve_immediately'   => true,
         'enable_translate_locale_en_us' => false,
         'page_search_index_lifetime'    => 259200,
         'enable_trash_can'              => true,
-        'app_version_display_in_header' => true
+        'app_version_display_in_header' => true,
+        'default_jpeg_image_compression'     => 80,
+        'help_overlay'                  => true,
+        'require_version_comments'      => false,
     ),
 
     'theme' => array(
 
-        'compress_preprocessor_output' => true
+        'compress_preprocessor_output' => true,
+        'generate_less_sourcemap' => false,
     ),
 
     'updates' => array(
 
         'enable_auto_update_core'       => false,
         'enable_auto_update_packages'   => false,
-        'enable_permissions_protection' => true
+        'enable_permissions_protection' => true,
+        'check_threshold' => 172800,
+        'services' => array(
+            'get_available_updates' => 'http://www.concrete5.org/tools/update_core',
+            'inspect_update' => 'http://www.concrete5.org/tools/inspect_update'
+        )
     ),
     'paths'             => array(
         'trash'  => '/!trash',
         'drafts' => '/!drafts'
-    ),
-    'conversations'     => array(
-        'attachments_pending_file_set' => 'Conversation Messages (Pending)',
-        'attachments_file_set'         => 'Conversation Messages',
-        'attachments_enabled'          => true
     ),
     'icons'             => array(
         'page_template'        => array(
@@ -442,11 +498,19 @@ return array(
             'default' => ASSETS_URL_IMAGES . '/avatar_none.png'
         )
     ),
+
+    'file_manager' => array(
+        'images' => array(
+            'use_exim_data_to_rotate_images' => false,
+            'manipulation_library' => 'gd'
+        ),
+        'results' => 10
+    ),
+
     'sitemap_xml'       => array(
         'file'      => 'sitemap.xml',
         'frequency' => 'weekly',
-        'priority'  => 0.5,
-        'base_url'  => BASE_URL
+        'priority'  => 0.5
     ),
 
     /**
@@ -467,7 +531,14 @@ return array(
          *
          * @var bool
          */
-        'toolbar_large_font' => false
+        'toolbar_large_font' => false,
+
+        /**
+         * Show help system
+         *
+         * @var bool
+         */
+        'display_help_system' => true
     ),
 
     /**
@@ -476,11 +547,6 @@ return array(
      * ------------------------------------------------------------------------
      */
     'i18n'              => array(
-
-        /**
-         * Enable internationalization
-         */
-        'enabled'               => true,
 
         /**
          * Allow users to choose language on login
@@ -497,9 +563,13 @@ return array(
         'background_feed'        => '//backgroundimages.concrete5.org/wallpaper',
         'background_feed_secure' => 'https://backgroundimages.concrete5.org/wallpaper',
         'background_info'        => 'http://backgroundimages.concrete5.org/get_image_data.php',
+        'help'                   => array(
+            'developer'          => 'http://www.concrete5.org/documentation/developers/5.7/',
+            'user'          => 'http://www.concrete5.org/documentation/using-concrete5-7',
+            'forum'          => 'http://www.concrete5.org/community/forums'
+        ),
         'paths'                  => array(
             'menu_help_service' => '/tools/get_remote_help_list/',
-            'theme_preview'     => '/tools/preview_theme/',
             'site_page'         => '/private/sites',
             'newsflow_slot_content'      => '/tools/slot_content/',
             'marketplace'       => array(
@@ -548,13 +618,14 @@ return array(
 
         'name'         => 'CONCRETE5',
         'handler'      => 'file',
+        'save_path'    => null,
         'max_lifetime' => 7200,
         'cookie'       => array(
-            'path'     => '',
-            'lifetime' => 7200,
-            'domain'   => '',
-            'secure'   => false,
-            'httponly' => false
+            'cookie_path'     => false, // set a specific path here if you know it, otherwise it'll default to relative
+            'cookie_lifetime' => 0,
+            'cookie_domain'   => false,
+            'cookie_secure'   => false,
+            'cookie_httponly' => true
         )
     ),
 
@@ -647,12 +718,6 @@ return array(
          */
         'profiles_enabled'  => false,
 
-        /**
-         * Enable user timezones
-         *
-         * @var bool
-         */
-        'timezones_enabled' => false,
         'username'          => array(
             'maximum'      => 64,
             'minimum'      => 3,
@@ -663,7 +728,8 @@ return array(
             'maximum'        => 128,
             'minimum'        => 5,
             'hash_portable'  => false,
-            'hash_cost_log2' => 12
+            'hash_cost_log2' => 12,
+            'legacy_salt'    => '',
         ),
         'private_messages'  => array(
             'throttle_max'          => 20,
@@ -699,6 +765,13 @@ return array(
      * ------------------------------------------------------------------------
      */
     'security'          => array(
+        'session' => array(
+
+            'invalidate_on_user_agent_mismatch' => true,
+
+            'invalidate_on_ip_mismatch' => true
+
+        ),
         'ban'   => array(
             'ip' => array(
 
@@ -719,6 +792,15 @@ return array(
                  */
                 'length'   => 10
             )
+        ),
+        'misc' => array(
+
+            /**
+             * Defence Click Jacking.
+             *
+             * @var bool|string DENY, SAMEORIGIN, ALLOW-FROM uri
+             */
+            'x_frame_options' => 'SAMEORIGIN'
         )
     ),
 
@@ -741,13 +823,6 @@ return array(
          * @var string The permission model (simple|advanced)
          */
         'model'                         => 'simple',
-
-        /**
-         * Use collection ID for page permission identifier
-         *
-         * @var bool
-         */
-        'page_permission_collection_id' => true
     ),
 
     /**
@@ -779,20 +854,23 @@ return array(
         /**
          * URL rewriting
          *
-         * Doesn't impact URL_REWRITING_ALL which is set at a lower level and
+         * Doesn't impact concrete.seo.url_rewriting_all which is set at a lower level and
          * controls whether ALL items will be rewritten.
          *
          * @var bool
          */
-        'url_rewriting'        => false,
-        'url_rewriting_all'        => false,
-        'redirect_to_base_url' => false,
-        'trailing_slash'       => false,
-        'title_format'         => '%1$s :: %2$s',
-        'page_path_separator'  => '-',
-        'group_name_separator' => ' / ',
-        'segment_max_length'   => 128,
-        'paging_string'        => 'ccm_paging_p'
+        'url_rewriting'           => false,
+        'url_rewriting_all'       => false,
+        'redirect_to_canonical_url'  => false,
+        'canonical_url'          => null,
+        'canonical_ssl_url'          => null,
+        'trailing_slash'          => false,
+        'title_format'            => '%1$s :: %2$s',
+        'title_segment_separator' => ' :: ',
+        'page_path_separator'     => '-',
+        'group_name_separator'    => ' / ',
+        'segment_max_length'      => 128,
+        'paging_string'           => 'ccm_paging_p'
     ),
 
     /**
@@ -801,13 +879,24 @@ return array(
      * ------------------------------------------------------------------------
      */
     'statistics'        => array(
-        'track_page_views' => true
+        'track_downloads' => true
     ),
     'limits'            => array(
         'sitemap_pages'           => 100,
         'delete_pages'            => 10,
         'copy_pages'              => 10,
         'page_search_index_batch' => 200,
-        'job_queue_batch'         => 10
-    )
+        'job_queue_batch'         => 10,
+        'style_customizer' => array(
+            'size_min' => -50,
+            'size_max' => 200,
+        )
+    ),
+
+    'page' => array(
+        'search' => array(
+            // Always reindex pages (usually it isn't performed when approving workflows)
+            'always_reindex' => false,
+        )
+    ),
 );

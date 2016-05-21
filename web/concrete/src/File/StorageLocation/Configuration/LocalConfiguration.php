@@ -3,7 +3,7 @@ namespace Concrete\Core\File\StorageLocation\Configuration;
 use Concrete\Core\Error\Error;
 use \Concrete\Flysystem\Adapter\Local;
 
-class LocalConfiguration extends Configuration implements ConfigurationInterface
+class LocalConfiguration extends Configuration implements ConfigurationInterface, DeferredConfigurationInterface
 {
 
     protected $path;
@@ -50,14 +50,19 @@ class LocalConfiguration extends Configuration implements ConfigurationInterface
         if(strpos($rel, '://')) {
             return $rel;
         }
-        return BASE_URL . $rel;
+
+        $url = \Core::getApplicationURL(true);
+        $url = $url->setPath($rel);
+        return trim((string) $url, '/');
     }
 
     public function loadFromRequest(\Concrete\Core\Http\Request $req)
     {
         $data = $req->get('fslType');
         $this->path = rtrim($data['path'], '/');
-        $this->relativePath = rtrim($data['relativePath'], '/');
+        if (isset($data['relativePath'])) {
+            $this->relativePath = rtrim($data['relativePath'], '/');
+        }
     }
 
     /**

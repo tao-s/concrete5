@@ -13,9 +13,8 @@ $page_selector = Loader::helper('form/page_selector');
                value="<?= Loader::helper('concrete/urls')->getBlockTypeToolsURL($bt) ?>/preview_pane"/>
 
         <fieldset>
-            <legend><?= t('Settings') ?></legend>
-        </fieldset>
-
+        <legend><?= t('Settings') ?></legend>
+        
         <div class="form-group">
             <label for="orderBy"><?= t('Page Order') ?></label>
             <select class="form-control" name="orderBy">
@@ -41,6 +40,16 @@ $page_selector = Loader::helper('form/page_selector');
                     <?= t('in reverse sitemap order.') ?>
                 </option>
             </select>
+        </div>
+
+        <div class="form-group">
+            <label for="displaySystemPages"><?php echo t('System pages') ?></label>
+            <div class="checkbox">
+                <label>
+                <?php echo $form->checkbox('displaySystemPages', 1, $info['displaySystemPages']); ?>
+                <?php echo t('Display system pages.'); ?>
+                </label>
+            </div>
         </div>
 
         <div class="form-group">
@@ -86,7 +95,7 @@ $page_selector = Loader::helper('form/page_selector');
         </div>
 
         <div class="form-group">
-            <label for="displaySubPages"><?= t('Sibling Pages') ?></label>
+            <label for="displaySubPages"><?= t('Child Pages') ?></label>
 
             <select class='form-control' name="displaySubPages" onchange="toggleSubPageLevels(this.value);">
                 <option value="none"<? if ($info['displaySubPages'] == 'none') { ?> selected<? } ?>>
@@ -107,7 +116,7 @@ $page_selector = Loader::helper('form/page_selector');
         </div>
 
         <div class="form-group">
-            <label for="displaySubPages"><?= t('Page Levels') ?></label>
+            <label for="displaySubPageLevels"><?= t('Page Levels') ?></label>
 
             <select class="form-control" id="displaySubPageLevels"
                     name="displaySubPageLevels" <? if ($info['displaySubPages'] == 'none') { ?> disabled <? } ?>
@@ -133,6 +142,7 @@ $page_selector = Loader::helper('form/page_selector');
                 <span class="input-group-addon"> <?= t('levels') ?></span>
             </div>
         </div>
+        </fieldset>
 
         <div class="loader">
             <i class="fa fa-cog fa-spin"></i>
@@ -140,15 +150,13 @@ $page_selector = Loader::helper('form/page_selector');
     </div>
 
     <div class="col-xs-6">
+        <fieldset>
+        <legend><?= t('Included Pages') ?></legend>
         <div class="preview">
-            <fieldset>
-                <legend><?= t('Included Pages') ?></legend>
-            </fieldset>
-            <div class="render">
-
-            </div>
-            <div class="cover"></div>
+         	<div class="render"></div>
+			<div class="cover"></div>
         </div>
+        </fieldset>
     </div>
 
 </div>

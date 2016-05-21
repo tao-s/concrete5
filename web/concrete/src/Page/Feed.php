@@ -3,6 +3,7 @@
 namespace Concrete\Core\Page;
 use Concrete\Core\Backup\ContentExporter;
 use Concrete\Core\Block\View\BlockView;
+use Concrete\Core\Html\Object\HeadLink;
 use Concrete\Core\Http\Request;
 use Concrete\Core\Permission\Access\Entity\GroupEntity;
 use Database;
@@ -15,6 +16,38 @@ class Feed
 
     protected $itemsPerFeed = 20;
     protected $checkPagePermissions = true;
+
+    /**
+     * @Column(type="string")
+     */
+    protected $customTopicAttributeKeyHandle = null;
+
+
+    /**
+     * @Column(columnDefinition="integer unsigned")
+     */
+    protected $customTopicTreeNodeID = 0;
+
+    /**
+     * @Column(columnDefinition="integer unsigned")
+     */
+    protected $iconFID = 0;
+
+    /**
+     * @return mixed
+     */
+    public function getIconFileID()
+    {
+        return $this->iconFID;
+    }
+
+    /**
+     * @param mixed $iconFID
+     */
+    public function setIconFileID($iconFID)
+    {
+        $this->iconFID = $iconFID;
+    }
 
     /**
      * @param mixed $cParentID
@@ -118,6 +151,38 @@ class Feed
     public function getTitle()
     {
         return $this->pfTitle;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getCustomTopicAttributeKeyHandle()
+    {
+        return $this->customTopicAttributeKeyHandle;
+    }
+
+    /**
+     * @param mixed $customTopicAttributeKeyHandle
+     */
+    public function setCustomTopicAttributeKeyHandle($customTopicAttributeKeyHandle)
+    {
+        $this->customTopicAttributeKeyHandle = $customTopicAttributeKeyHandle;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getCustomTopicTreeNodeID()
+    {
+        return $this->customTopicTreeNodeID;
+    }
+
+    /**
+     * @param mixed $customTopicTreeNodeID
+     */
+    public function setCustomTopicTreeNodeID($customTopicTreeNodeID)
+    {
+        $this->customTopicTreeNodeID = $customTopicTreeNodeID;
     }
 
     /**
@@ -227,7 +292,7 @@ class Feed
 
     public function getFeedURL()
     {
-        return BASE_URL . \URL::to('/rss/' . $this->getHandle());
+        return \URL::to('/rss/' . $this->getHandle());
     }
     /**
      * @Column(type="boolean")
@@ -236,15 +301,13 @@ class Feed
 
     public static function getList()
     {
-        $db = Database::get();
-        $em = $db->getEntityManager();
+        $em = \ORM::entityManager('core');
         return $em->getRepository('\Concrete\Core\Page\Feed')->findBy(array(), array('pfTitle' => 'asc'));
     }
 
     public function save()
     {
-        $db = Database::get();
-        $em = $db->getEntityManager();
+        $em = \ORM::entityManager('core');
         $em->persist($this);
         $em->flush();
     }
@@ -286,23 +349,26 @@ class Feed
 
     public function delete()
     {
-        $em = Database::get()->getEntityManager();
+        $em = \ORM::entityManager('core');
         $em->remove($this);
         $em->flush();
     }
 
     public static function getByID($id)
     {
-        $db = Database::get();
-        $em = $db->getEntityManager();
+        $em = \ORM::entityManager('core');
         $r = $em->find('\Concrete\Core\Page\Feed', $id);
         return $r;
     }
 
+    /**
+     * Get a PageFeed by its handle
+     * @param $pfHandle
+     * @return self|null
+     */
     public static function getByHandle($pfHandle)
     {
-        $db = Database::get();
-        $em = $db->getEntityManager();
+        $em = \ORM::entityManager('core');
         return $em->getRepository('\Concrete\Core\Page\Feed')->findOneBy(
             array('pfHandle' => $pfHandle)
         );
@@ -348,6 +414,9 @@ class Feed
                 $pl->filterByParentID($this->cParentID);
             }
         }
+        if ($this->getCustomTopicAttributeKeyHandle()) {
+            $pl->filterByTopic(intval($this->getCustomTopicTreeNodeID()));
+        }
         if ($this->pfDisplayAliases) {
             $pl->includeAliases();
         }
@@ -362,9 +431,11 @@ class Feed
 
     protected function getPageFeedContent(Page $p)
     {
+        $content = false;
         switch($this->pfContentToDisplay) {
             case 'S':
-                return $p->getCollectionDescription();
+                $content = $p->getCollectionDescription();
+                break;
             case 'A':
                 $a = new \Area($this->getAreaHandleToDisplay());
                 $blocks = $a->getAreaBlocksArray($p);
@@ -377,24 +448,49 @@ class Feed
                 }
                 $content = ob_get_contents();
                 ob_end_clean();
-                return $content;
+                break;
         }
+
+        $f = $p->getAttribute('thumbnail');
+        if (is_object($f)) {
+            $content = '<p><img src="' . $f->getURL() . '" /></p>' . $content;
+        }
+        return $content;
     }
 
-    public function getOutput()
+    /**
+     * Get the feed output in RSS form given a Request object
+     * @param Request|null $request
+     * @return string|null The full RSS output as a string
+     */
+    public function getOutput($request = null)
     {
         $pl = $this->getPageListObject();
-        $link = BASE_URL;
+        $link = false;
         if ($this->cParentID) {
             $parent = Page::getByID($this->cParentID);
-            $link = $parent->getCollectionLink(true);
+            $link = $parent->getCollectionLink();
+        } else {
+            $link = \URL::to('/');
         }
         $pagination = $pl->getPagination();
         if ($pagination->getTotalResults() > 0) {
             $writer = new \Zend\Feed\Writer\Feed();
             $writer->setTitle($this->getTitle());
             $writer->setDescription($this->getDescription());
-            $writer->setLink($link);
+            if ($this->getIconFileID()) {
+                $f = \File::getByID($this->getIconFileID());
+                if (is_object($f)) {
+                    $data = array(
+                        'uri' => $f->getURL(),
+                        'title' => $f->getTitle(),
+                        'link' => (string) $link
+                    );
+                    $writer->setImage($data);
+                }
+            }
+            $writer->setLink((string) $link);
+
             foreach($pagination->getCurrentPageResults() as $p) {
                 $entry = $writer->createEntry();
                 $entry->setTitle($p->getCollectionName());
@@ -404,11 +500,30 @@ class Feed
                     $content = t('No Content.');
                 }
                 $entry->setDescription($content);
-                $entry->setLink($p->getCollectionLink(true));
+                $entry->setLink((string) $p->getCollectionLink(true));
                 $writer->addEntry($entry);
             }
+
+            $ev = new FeedEvent();
+            if (isset($parent)) {
+                $ev->setPageObject($parent);
+            }
+            $ev->setFeedObject($this);
+            $ev->setWriterObject($writer);
+            $ev->setRequest($request);
+
+            $ev = \Events::dispatch('on_page_feed_output', $ev);
+
+            $writer = $ev->getWriterObject();
+
             return $writer->export('rss');
         }
+    }
+
+    public function getHeadLinkElement()
+    {
+        $link = new HeadLink($this->getFeedURL(), 'alternate', 'application/rss+xml');
+        return $link;
     }
 
 }

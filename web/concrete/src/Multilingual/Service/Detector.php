@@ -3,8 +3,6 @@
 namespace Concrete\Core\Multilingual\Service;
 
 use Concrete\Core\Multilingual\Page\Section\Section;
-use Concrete\Core\Package\Package;
-use Concrete\Core\Package\PackageList;
 use Concrete\Core\Page\Page;
 use Session;
 use Cookie;
@@ -14,24 +12,24 @@ defined('C5_EXECUTE') or die("Access Denied.");
 
 class Detector
 {
+    protected static $enabled;
 
     /**
-     *
-     * Returns the preferred locale based on session, cookie,
+     * Returns the preferred section based on session, cookie,
      * user object, default browser (if allowed), and finally
-     * site preferences. Returns a string, not a section.
+     * site preferences.
      * Since the user's language is not a locale but a language,
-     * attempts to determine best locale for the given language.
+     * attempts to determine best section for the given language.
+     *
      * @return Section
      */
     public static function getPreferredSection()
     {
-
         $locale = false;
         // they have a language in a certain session going already
         if (Session::has('multilingual_default_locale')) {
             $locale = Session::get('multilingual_default_locale');
-        } else if (Cookie::has('multilingual_default_locale')) {
+        } elseif (Cookie::has('multilingual_default_locale')) {
             $locale = Cookie::get('multilingual_default_locale');
         }
 
@@ -53,11 +51,11 @@ class Detector
             }
         }
 
-        if (Config::get('concrete.multilingual.use_browser_detected_language')) {
+        if (Config::get('concrete.multilingual.use_browser_detected_locale')) {
             $home = false;
-            $locales =  \Punic\Misc::getBrowserLocales();
-            foreach($locales as $locale => $value) {
-                $home = Section::getByLocaleOrLanguage($value);
+            $locales = \Punic\Misc::getBrowserLocales();
+            foreach (array_keys($locales) as $locale) {
+                $home = Section::getByLocaleOrLanguage($locale);
                 if ($home) {
                     break;
                 }
@@ -73,6 +71,9 @@ class Detector
 
     public static function setupSiteInterfaceLocalization(Page $c = null)
     {
+        if (\User::isLoggedIn() && Config::get('concrete.multilingual.keep_users_locale')) {
+            return;
+        }
         if (!$c) {
             $c = Page::getCurrentPage();
         }
@@ -93,32 +94,23 @@ class Detector
 
         $locale = $ms->getLocale();
 
-
-        // change core language to translate e.g. core blocks/themes
         if (strlen($locale)) {
             \Localization::changeLocale($locale);
         }
+    }
 
-        // site translations
-        if (is_dir(DIR_LANGUAGES_SITE_INTERFACE)) {
-            if (file_exists(DIR_LANGUAGES_SITE_INTERFACE . '/' . $locale . '.mo')) {
-                $loc = \Localization::getInstance();
-                $loc->addSiteInterfaceLanguage($locale);
+    public static function isEnabled()
+    {
+        if (!isset(self::$enabled)) {
+            $app = \Core::make('app');
+            if (!$app->isInstalled()) {
+                return false;
             }
+            $db = \Database::connection();
+            $count = $db->GetOne('select count(cID) from MultilingualSections');
+            self::$enabled = $count > 0;
         }
 
-        // add package translations
-        if (strlen($locale)) {
-            $ms = Section::getByLocale($locale);
-            if ($ms instanceof Section) {
-                $pl = PackageList::get();
-                $installed = $pl->getPackages();
-                foreach ($installed as $pkg) {
-                    if ($pkg instanceof Package) {
-                        $pkg->setupPackageLocalization($ms->getLocale());
-                    }
-                }
-            }
-        }
+        return self::$enabled;
     }
 }

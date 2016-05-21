@@ -1,11 +1,12 @@
 <?php
 namespace Concrete\Core\Localization;
+
 use Config;
 use Concrete\Core\Cache\Adapter\ZendCacheDriver;
-use Loader;
+use Core;
 use Events;
-use \Zend\I18n\Translator\Translator;
-use \Punic\Data as PunicData;
+use Zend\I18n\Translator\Translator;
+use Punic\Data as PunicData;
 
 class Localization
 {
@@ -19,7 +20,6 @@ class Localization
     {
         if (null === self::$loc) {
             self::$loc = new self();
-
         }
 
         return self::$loc;
@@ -27,21 +27,23 @@ class Localization
 
     public static function changeLocale($locale)
     {
-        $loc = Localization::getInstance();
+        $loc = self::getInstance();
         $loc->setLocale($locale);
     }
     /** Returns the currently active locale
      * @return string
+     *
      * @example 'en_US'
      */
     public static function activeLocale()
     {
-        $loc = Localization::getInstance();
+        $loc = self::getInstance();
 
         return $loc->getLocale();
     }
     /** Returns the language for the currently active locale
      * @return string
+     *
      * @example 'en'
      */
     public static function activeLanguage()
@@ -49,59 +51,76 @@ class Localization
         return current(explode('_', self::activeLocale()));
     }
 
-    protected $translate;
+    protected $translate = null;
 
     public function setLocale($locale)
     {
-        $localeNeededLoading = false;
         if (($locale == 'en_US') && (!Config::get('concrete.misc.enable_translate_locale_en_us'))) {
-            if (isset($this->translate)) {
-                unset($this->translate);
-            }
-            PunicData::setDefaultLocale($locale);
-            return;
-        }
-        if (is_dir(DIR_LANGUAGES . '/' . $locale)) {
-            $languageDir = DIR_LANGUAGES . '/' . $locale;
-        } elseif (is_dir(DIR_LANGUAGES_CORE . '/' . $locale)) {
-            $languageDir = DIR_LANGUAGES_CORE . '/' . $locale;
+            $this->translate = null;
         } else {
-            return;
+            $this->translate = new Translator();
+            $this->translate->setLocale($locale);
+            $this->translate->setCache(self::getCache());
+            // Core language files
+            $languageFile = DIR_LANGUAGES . "/$locale/LC_MESSAGES/messages.mo";
+            if (!is_file($languageFile)) {
+                $languageFile = DIR_LANGUAGES_CORE . "/$locale/LC_MESSAGES/messages.mo";
+                if (!is_file($languageFile)) {
+                    $languageFile = '';
+                }
+            }
+            if ($languageFile !== '') {
+                $this->translate->addTranslationFile('gettext', $languageFile);
+            }
+            // Package language files
+            if (Config::get('app.bootstrap.packages_loaded') === true) {
+                $pkgList = \Concrete\Core\Package\PackageList::get();
+                foreach ($pkgList->getPackages() as $pkg) {
+                    $pkg->setupPackageLocalization($locale, $this->translate);
+                }
+                // Site language files
+                static::setupSiteLocalization($this->translate);
+            }
         }
-
-        $this->translate = new Translator();
-        $this->translate->addTranslationFilePattern('gettext', $languageDir, 'LC_MESSAGES/messages.mo');
-        $this->translate->setLocale($locale);
-        $this->translate->setCache(self::getCache());
         PunicData::setDefaultLocale($locale);
-
         $event = new \Symfony\Component\EventDispatcher\GenericEvent();
         $event->setArgument('locale', $locale);
         Events::dispatch('on_locale_load', $event);
     }
 
+    /**
+     * Load the site language files (must be done after all packages called their setupPackageLocalization)
+     */
+    public static function setupSiteLocalization(Translator $translate = null)
+    {
+        if (\Core::make('multilingual/detector')->isEnabled()) {
+            if ($translate === null) {
+                $translate = static::getInstance()->getActiveTranslateObject();
+            }
+            if ($translate !== null) {
+                $languageFile = DIR_LANGUAGES_SITE_INTERFACE . "/" . $translate->getLocale() . ".mo";
+                if (is_file($languageFile)) {
+                    $translate->addTranslationFile('gettext', $languageFile);
+                }
+            }
+        }
+    }
+
     public function getLocale()
     {
-        return isset($this->translate) ? $this->translate->getLocale() : 'en_US';
+        $translate = $this->getActiveTranslateObject();
+
+        return $translate ? $translate->getLocale() : 'en_US';
     }
 
     public function getActiveTranslateObject()
     {
-        return $this->translate;
-    }
-
-    public function addSiteInterfaceLanguage($language)
-    {
-        if (!is_object($this->translate)) {
-            $this->translate = new Translator();
-            $this->translate->setCache(self::getCache());
-        }
-        $this->translate->addTranslationFilePattern('gettext', DIR_LANGUAGES_SITE_INTERFACE, $language . '.mo');
+        return isset($this->translate) ? $this->translate : null;
     }
 
     public static function getTranslate()
     {
-        $loc = Localization::getInstance();
+        $loc = self::getInstance();
 
         return $loc->getActiveTranslateObject();
     }
@@ -109,7 +128,7 @@ class Localization
     public static function getAvailableInterfaceLanguages()
     {
         $languages = array();
-        $fh = Loader::helper('file');
+        $fh = Core::make('helper/file');
 
         if (file_exists(DIR_LANGUAGES)) {
             $contents = $fh->getDirectoryContents(DIR_LANGUAGES);
@@ -137,12 +156,14 @@ class Localization
      *   "en_US" => "English (United States)",
      *   "fr_FR" => "Francais (France)"]
      * The result will be sorted by the key.
-     * If the $displayLocale is set, the language- and region-names will be returned in that language
+     * If the $displayLocale is set, the language- and region-names will be returned in that language.
+     *
      * @param string|null $displayLocale Language of the description.
      *                    Set to null to get each locale name in its own language,
      *                    set to '' to use the current locale,
      *                    set to a specific locale to get the names in that language
-     * @return Array An associative Array with locale as the key and description as content
+     *
+     * @return array An associative Array with locale as the key and description as content
      */
     public static function getAvailableInterfaceLanguageDescriptions($displayLocale = '')
     {
@@ -161,12 +182,14 @@ class Localization
 
     /**
      * Get the description of a locale consisting of language and region description
-     * e.g. "French (France)"
+     * e.g. "French (France)".
+     *
      * @param string $locale Locale that should be described
      * @param string|null $displayLocale Language of the description.
      *                    Set to null to get each locale name in its own language,
      *                    set to '' to use the current locale,
      *                    set to a specific locale to get the names in that language
+     *
      * @return string Description of a language
      */
     public static function getLanguageDescription($locale, $displayLocale = '')
@@ -187,10 +210,12 @@ class Localization
     }
 
     /**
-     * Clear the translations cache
+     * Clear the translations cache.
      */
     public static function clearCache()
     {
+        $locale = static::activeLocale();
         self::getCache()->flush();
+        static::changeLocale($locale);
     }
 }
